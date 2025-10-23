@@ -2,7 +2,7 @@
 //  JournalAppApp.swift
 //  JournalApp
 //
-//  Created by leena almusharraf on 19/10/2025.
+//  Created by Leena Almusharraf on 19/10/2025.
 //
 
 import SwiftUI
@@ -11,7 +11,7 @@ import SwiftUI
 struct JournalAppApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            SplashPage() // ✅ This launches your actual main page
         }
     }
 }
