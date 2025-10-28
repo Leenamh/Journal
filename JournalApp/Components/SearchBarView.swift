@@ -25,7 +25,7 @@ struct SearchBarView: View {
             )
             .foregroundColor(.white)
 
-            // 🎤 Right icon
+            // 🎤 Right iconuuu
             Image(systemName: "mic.fill")
                 .foregroundColor(Color("gray"))
         }
