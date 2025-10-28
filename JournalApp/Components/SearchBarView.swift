@@ -12,11 +12,11 @@ struct SearchBarView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Left icon
+            // 🔍 Left icon
             Image(systemName: "magnifyingglass")
                 .foregroundColor(Color("gray"))
 
-            // Text field
+            // ✏️ Text field
             TextField(
                 "",
                 text: $searchText,
@@ -25,7 +25,7 @@ struct SearchBarView: View {
             )
             .foregroundColor(.white)
 
-            // Right icon
+            // 🎤 Right icon
             Image(systemName: "mic.fill")
                 .foregroundColor(Color("gray"))
         }
@@ -33,20 +33,26 @@ struct SearchBarView: View {
         .frame(height: 48)
         .background(
             Capsule()
-                .fill(Color("buttonColor")) // your dark theme color
+                .fill(Color.clear)
                 .glassEffect(
                     .regular
-                        .tint(Color("buttonColor")) // glass tint for dark tone
-                        .interactive(),             // subtle reflective motion
+                        .tint(Color.white.opacity(0.05))  // soft bright glass tint
+                        .interactive(),                   // subtle reflection
                     in: Capsule()
                 )
         )
         .overlay(
             Capsule()
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.8) // faint rim highlight
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.8) // faint bright rim
         )
-        .shadow(color: .black.opacity(0.6), radius: 10, x: 0, y: 3)
+        .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 3)
         .padding(.horizontal, 20)
         .padding(.bottom, 12)
     }
+}
+
+#Preview {
+    SearchBarView(searchText: .constant(""))
+        .preferredColorScheme(.dark)
+        .background(Color("BG"))
 }

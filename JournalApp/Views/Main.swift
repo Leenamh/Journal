@@ -15,6 +15,10 @@ struct MainView: View {
     @State private var showSortMenu = false
     @State private var sortOption: SortOption = .entryDate
     @State private var journalToDelete: Journal? = nil
+    
+    // 🆕 For editing
+    @State private var editingJournal: Journal? = nil
+    @State private var isEditing = false
 
     enum SortOption {
         case bookmark, entryDate
@@ -37,6 +41,7 @@ struct MainView: View {
         return result
     }
 
+    // MARK: - Body
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Color("BG").ignoresSafeArea()
@@ -71,7 +76,11 @@ struct MainView: View {
 
                                 Spacer()
 
-                                Button { showCard.toggle() } label: {
+                                Button {
+                                    isEditing = false
+                                    editingJournal = nil
+                                    showCard = true
+                                } label: {
                                     Image(systemName: "plus")
                                         .font(.system(size: 18, weight: .medium))
                                         .foregroundColor(Color.white.opacity(0.65))
@@ -115,6 +124,11 @@ struct MainView: View {
                                         }
                                     }
                                 )
+                                .onTapGesture {
+                                    editingJournal = journal
+                                    isEditing = true
+                                    showCard = true
+                                }
                             }
                         }
                         .padding(.horizontal)
@@ -143,15 +157,25 @@ struct MainView: View {
                 .zIndex(10)
             }
 
-            // MARK: - New Journal Card
+            // MARK: - New / Edit Journal Card
             if showCard {
                 ZStack {
                     Color.black.opacity(0.5)
                         .ignoresSafeArea()
                         .onTapGesture { showCard = false }
 
-                    NewJournalCard(showCard: $showCard, offset: $cardOffset) { newJournal in
-                        journals.insert(newJournal, at: 0)
+                    NewJournalCard(
+                        showCard: $showCard,
+                        offset: $cardOffset,
+                        existingJournal: isEditing ? editingJournal : nil
+                    ) { updatedJournal in
+                        if isEditing, let index = journals.firstIndex(where: { $0.id == updatedJournal.id }) {
+                            journals[index] = updatedJournal
+                        } else {
+                            journals.insert(updatedJournal, at: 0)
+                        }
+                        isEditing = false
+                        editingJournal = nil
                     }
                     .zIndex(4)
                 }

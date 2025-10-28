@@ -10,6 +10,7 @@ import SwiftUI
 struct NewJournalCard: View {
     @Binding var showCard: Bool
     @Binding var offset: CGFloat
+    var existingJournal: Journal? = nil          // 🆕 optional for editing
     var onSave: (Journal) -> Void
 
     @State private var title: String = ""
@@ -18,15 +19,35 @@ struct NewJournalCard: View {
 
     private let startOffset: CGFloat = 60
 
+    // MARK: - Current date
     var currentDate: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
         return formatter.string(from: Date())
     }
 
+    // MARK: - Init with prefilled data
+    init(
+        showCard: Binding<Bool>,
+        offset: Binding<CGFloat>,
+        existingJournal: Journal? = nil,
+        onSave: @escaping (Journal) -> Void
+    ) {
+        _showCard = showCard
+        _offset = offset
+        self.existingJournal = existingJournal
+        self.onSave = onSave
+
+        // Pre-fill data if editing
+        _title = State(initialValue: existingJournal?.title ?? "")
+        _content = State(initialValue: existingJournal?.content ?? "")
+    }
+
+    // MARK: - Body
     var body: some View {
         ZStack {
             VStack(spacing: 12) {
+                // Handle (drag to close)
                 Capsule()
                     .fill(Color.gray.opacity(0.5))
                     .frame(width: 40, height: 5)
@@ -35,16 +56,16 @@ struct NewJournalCard: View {
                         DragGesture()
                             .onChanged { value in offset = value.translation.height }
                             .onEnded { _ in
-                                withAnimation(.spring()) {
-                                    if offset > 120 { showCard = false }
-                                    offset = 0
-                                }
+                                if offset > 120 { showCard = false }
+                                offset = 0
                             }
                     )
 
+                // MARK: - Top buttons
                 HStack {
+                    // ❌ Cancel
                     Button {
-                        withAnimation(.spring()) { showDiscardAlert = true }
+                        showDiscardAlert = true
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 18, weight: .semibold))
@@ -52,24 +73,26 @@ struct NewJournalCard: View {
                             .frame(width: 44, height: 44)
                             .glassEffect(
                                 .regular
-                                    .tint(Color("buttonColor")) // your dark glass color
-                                    .interactive(),             // subtle motion / dynamic reflection
+                                    .tint(Color("buttonColor"))
+                                    .interactive(),
                                 in: Circle()
                             )
                     }
 
-
                     Spacer()
 
+                    // ✅ Save
                     Button {
-                        let newJournal = Journal(
+                        var updatedJournal = existingJournal ?? Journal(
                             title: title.isEmpty ? "Untitled" : title,
                             date: currentDate,
                             content: content,
-                            isBookmarked: false
+                            isBookmarked: existingJournal?.isBookmarked ?? false
                         )
-                        onSave(newJournal)
-                        withAnimation(.spring()) { showCard = false }
+                        updatedJournal.title = title
+                        updatedJournal.content = content
+                        onSave(updatedJournal)
+                        showCard = false
                     } label: {
                         Image(systemName: "checkmark")
                             .font(.system(size: 18, weight: .semibold))
@@ -77,23 +100,22 @@ struct NewJournalCard: View {
                             .frame(width: 44, height: 44)
                             .glassEffect(
                                 .regular
-                                    .tint(Color("PurpleButton").opacity(0.7)) // stronger tint = deeper glass feel
+                                    .tint(Color("PurpleButton").opacity(0.7))
                                     .interactive(),
                                 in: Circle()
                             )
-
                     }
-
                 }
                 .padding(.horizontal)
 
+                // MARK: - Text Fields
                 VStack(alignment: .leading, spacing: 8) {
                     TextField("Title", text: $title)
                         .font(.system(size: 34, weight: .bold))
                         .foregroundColor(Color("textColor"))
                         .padding(.top, 6)
 
-                    Text(currentDate)
+                    Text(existingJournal?.date ?? currentDate)
                         .font(.system(size: 16))
                         .foregroundColor(Color("gray"))
 
@@ -117,6 +139,7 @@ struct NewJournalCard: View {
                         )
                 }
                 .padding(.horizontal)
+
                 Spacer()
             }
             .frame(maxWidth: .infinity)
@@ -124,57 +147,84 @@ struct NewJournalCard: View {
             .background(Color("BgCard"))
             .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
             .offset(y: max(offset + startOffset, 0))
-            .animation(.spring(response: 0.45, dampingFraction: 0.85), value: offset)
             .ignoresSafeArea(edges: .bottom)
 
+            // MARK: - Discard Alert
             if showDiscardAlert {
                 Color.black.opacity(0.6)
                     .ignoresSafeArea()
-                    .onTapGesture { withAnimation(.easeOut) { showDiscardAlert = false } }
+                    .onTapGesture { showDiscardAlert = false }
 
-                VStack(spacing: 10) {
+                VStack(spacing: 14) {
                     Text("Are you sure you want to discard\nchanges on this journal?")
                         .font(.system(size: 17))
-                        .foregroundColor(Color.white.opacity(0.68))
+                        .foregroundColor(Color.white.opacity(0.85))
                         .multilineTextAlignment(.center)
-                        .frame(width: 252, height: 44)
+                        .padding(.horizontal, 8)
 
                     VStack(spacing: 8) {
+                        // Discard
                         Button {
-                            withAnimation(.spring()) {
-                                showCard = false
-                                showDiscardAlert = false
-                            }
+                            showCard = false
+                            showDiscardAlert = false
                         } label: {
                             Text("Discard Changes")
-                                .font(.system(size: 17, weight: .medium))
+                                .font(.system(size: 17, weight: .semibold))
                                 .foregroundColor(.red)
-                                .frame(width: 240, height: 22)
-                                .padding(.vertical, 12)
-                                .frame(width: 272, height: 48)
-                                .background(Color.white.opacity(0.08))
-                                .clipShape(RoundedRectangle(cornerRadius: 24))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 48)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 24)
+                                        .fill(Color("buttonColor").opacity(0.7))
+                                        .glassEffect(
+                                            .regular
+                                                .tint(Color("buttonColor").opacity(0.8))
+                                                .interactive(),
+                                            in: RoundedRectangle(cornerRadius: 24)
+                                        )
+                                )
                         }
 
+                        // Keep editing
                         Button {
-                            withAnimation(.spring()) { showDiscardAlert = false }
+                            showDiscardAlert = false
                         } label: {
                             Text("Keep Editing")
                                 .font(.system(size: 17, weight: .medium))
                                 .foregroundColor(.white)
-                                .frame(width: 240, height: 22)
-                                .padding(.vertical, 12)
-                                .frame(width: 272, height: 48)
-                                .background(Color(red: 118/255, green: 118/255, blue: 128/255).opacity(0.24))
-                                .clipShape(RoundedRectangle(cornerRadius: 24))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 48)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 24)
+                                        .fill(Color("buttonColor").opacity(0.6))
+                                        .glassEffect(
+                                            .regular
+                                                .tint(Color("buttonColor").opacity(0.7))
+                                                .interactive(),
+                                            in: RoundedRectangle(cornerRadius: 24)
+                                        )
+                                )
                         }
                     }
+                    .padding(.horizontal, 10)
                 }
-                .padding(.vertical, 20)
-                .frame(width: 268, height: 176)
-                .background(Color.black.opacity(0.6).blur(radius: 10))
-                .cornerRadius(20)
-                .transition(.scale.combined(with: .opacity))
+                .padding(.vertical, 22)
+                .frame(width: 280)
+                .background(
+                    RoundedRectangle(cornerRadius: 26)
+                        .fill(Color("buttonColor").opacity(0.6))
+                        .glassEffect(
+                            .regular
+                                .tint(Color("buttonColor").opacity(0.7))
+                                .interactive(),
+                            in: RoundedRectangle(cornerRadius: 26)
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 0.8)
+                )
+                .shadow(color: .black.opacity(0.5), radius: 12, x: 0, y: 3)
                 .zIndex(2)
             }
         }
@@ -182,6 +232,15 @@ struct NewJournalCard: View {
 }
 
 #Preview {
-    NewJournalCard(showCard: .constant(true), offset: .constant(0)) { _ in }
-        .preferredColorScheme(.dark)
+    NewJournalCard(
+        showCard: .constant(true),
+        offset: .constant(0),
+        existingJournal: Journal(
+            title: "Sample Entry",
+            date: "27/10/2025",
+            content: "Preview content here.",
+            isBookmarked: false
+        )
+    ) { _ in }
+    .preferredColorScheme(.dark)
 }
